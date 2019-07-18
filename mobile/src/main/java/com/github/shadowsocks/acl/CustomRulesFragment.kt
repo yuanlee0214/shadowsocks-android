@@ -63,7 +63,6 @@ class CustomRulesFragment : ToolbarFragment(), Toolbar.OnMenuItemClickListener, 
     companion object {
         private const val REQUEST_CODE_ADD = 1
         private const val REQUEST_CODE_EDIT = 2
-        private const val TEMPLATE_REGEX_DOMAIN = "(^|\\.)%s$"
 
         private const val SELECTED_SUBNETS = "com.github.shadowsocks.acl.CustomRulesFragment.SELECTED_SUBNETS"
         private const val SELECTED_HOSTNAMES = "com.github.shadowsocks.acl.CustomRulesFragment.SELECTED_HOSTNAMES"
@@ -97,7 +96,7 @@ class CustomRulesFragment : ToolbarFragment(), Toolbar.OnMenuItemClickListener, 
         private lateinit var templateSelector: Spinner
         private lateinit var editText: EditText
         private lateinit var inputLayout: TextInputLayout
-        private lateinit var positive: Button
+        private val positive by lazy { (dialog as AlertDialog).getButton(AlertDialog.BUTTON_POSITIVE) }
 
         override fun AlertDialog.Builder.prepare(listener: DialogInterface.OnClickListener) {
             val activity = requireActivity()
@@ -129,7 +128,6 @@ class CustomRulesFragment : ToolbarFragment(), Toolbar.OnMenuItemClickListener, 
 
         override fun onStart() {
             super.onStart()
-            positive = (dialog as AlertDialog).getButton(AlertDialog.BUTTON_POSITIVE)
             validate()
         }
 
@@ -170,14 +168,23 @@ class CustomRulesFragment : ToolbarFragment(), Toolbar.OnMenuItemClickListener, 
             inputLayout.error = message
         }
 
-        override val ret get() = AclEditResult(editText.text.toString().let { text ->
-            when (Template.values()[templateSelector.selectedItemPosition]) {
-                Template.Generic -> AclItem(text)
-                Template.Domain -> AclItem(TEMPLATE_REGEX_DOMAIN.format(Locale.ENGLISH, IDN.toASCII(text,
-                        IDN.ALLOW_UNASSIGNED or IDN.USE_STD3_ASCII_RULES).replace(".", "\\.")))
-                Template.Url -> AclItem(text, true)
+        override fun ret(which: Int) = when (which) {
+            DialogInterface.BUTTON_POSITIVE, DialogInterface.BUTTON_NEUTRAL -> {
+                AclEditResult(editText.text.toString().let { text ->
+                    when (Template.values()[templateSelector.selectedItemPosition]) {
+                        Template.Generic -> AclItem(text)
+                        Template.Domain -> AclItem(IDN.toASCII(text, IDN.ALLOW_UNASSIGNED or IDN.USE_STD3_ASCII_RULES)
+                                .replace(".", "\\.").let { "(^|\\.)$it\$" })
+                        Template.Url -> AclItem(text, true)
+                    }
+                }, arg)
             }
-        }, arg)
+            else -> null
+        }
+
+        override fun onClick(dialog: DialogInterface?, which: Int) {
+            if (which != DialogInterface.BUTTON_NEGATIVE) super.onClick(dialog, which)
+        }
     }
 
     private inner class AclRuleViewHolder(view: View) : RecyclerView.ViewHolder(view),
@@ -419,7 +426,7 @@ class CustomRulesFragment : ToolbarFragment(), Toolbar.OnMenuItemClickListener, 
                 is URL -> acl.urls.add(it)
             }
         }
-        clipboard.primaryClip = ClipData.newPlainText(null, acl.toString())
+        clipboard.setPrimaryClip(ClipData.newPlainText(null, acl.toString()))
     }
 
     override fun onMenuItemClick(item: MenuItem): Boolean = when (item.itemId) {
@@ -438,7 +445,7 @@ class CustomRulesFragment : ToolbarFragment(), Toolbar.OnMenuItemClickListener, 
         }
         R.id.action_import_gfwlist -> {
             val acl = Acl().fromId(Acl.GFWLIST)
-            if (!acl.bypass) acl.subnets.asIterable().forEach { adapter.addSubnet(it) }
+            if (acl.bypass) acl.subnets.asIterable().forEach { adapter.addSubnet(it) }
             acl.proxyHostnames.asIterable().forEach { adapter.addHostname(it) }
             acl.urls.asIterable().forEach { adapter.addURL(it) }
             true

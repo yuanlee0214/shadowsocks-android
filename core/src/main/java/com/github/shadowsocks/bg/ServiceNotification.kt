@@ -55,13 +55,14 @@ class ServiceNotification(private val service: BaseService.Interface, profileNam
             override fun stateChanged(state: Int, profileName: String?, msg: String?) { }   // ignore
             override fun trafficUpdated(profileId: Long, stats: TrafficStats) {
                 if (profileId != 0L) return
-                service as Context
-                val txr = service.getString(R.string.speed, Formatter.formatFileSize(service, stats.txRate))
-                val rxr = service.getString(R.string.speed, Formatter.formatFileSize(service, stats.rxRate))
-                builder.setContentText("$txr↑\t$rxr↓")
-                style.bigText(service.getString(R.string.stat_summary, txr, rxr,
-                        Formatter.formatFileSize(service, stats.txTotal),
-                        Formatter.formatFileSize(service, stats.rxTotal)))
+                builder.apply {
+                    setContentText((service as Context).getString(R.string.traffic,
+                            service.getString(R.string.speed, Formatter.formatFileSize(service, stats.txRate)),
+                            service.getString(R.string.speed, Formatter.formatFileSize(service, stats.rxRate))))
+                    setSubText(service.getString(R.string.traffic,
+                            Formatter.formatFileSize(service, stats.txTotal),
+                            Formatter.formatFileSize(service, stats.rxTotal)))
+                }
                 show()
             }
             override fun trafficPersisted(profileId: Long) { }
@@ -77,13 +78,18 @@ class ServiceNotification(private val service: BaseService.Interface, profileNam
             .setContentTitle(profileName)
             .setContentIntent(Core.configureIntent(service))
             .setSmallIcon(R.drawable.ic_service_active)
-    private val style = NotificationCompat.BigTextStyle(builder).bigText("")
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
     private var isVisible = true
 
     init {
         service as Context
-        if (Build.VERSION.SDK_INT < 24) builder.addAction(R.drawable.ic_navigation_close,
-                service.getString(R.string.stop), PendingIntent.getBroadcast(service, 0, Intent(Action.CLOSE), 0))
+        val closeAction = NotificationCompat.Action.Builder(
+                R.drawable.ic_navigation_close,
+                service.getString(R.string.stop),
+                PendingIntent.getBroadcast(service, 0, Intent(Action.CLOSE), 0)).apply {
+            setShowsUserInterface(false)
+        }.build()
+        if (Build.VERSION.SDK_INT < 24) builder.addAction(closeAction) else builder.addInvisibleAction(closeAction)
         update(if (service.getSystemService<PowerManager>()?.isInteractive != false)
             Intent.ACTION_SCREEN_ON else Intent.ACTION_SCREEN_OFF, true)
         service.registerReceiver(lockReceiver, IntentFilter().apply {

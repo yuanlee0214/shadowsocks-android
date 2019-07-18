@@ -22,7 +22,9 @@ package com.github.shadowsocks.widget
 
 import android.content.Context
 import android.graphics.drawable.Drawable
+import android.os.Build
 import android.util.AttributeSet
+import android.view.PointerIcon
 import android.view.View
 import androidx.annotation.DrawableRes
 import androidx.appcompat.widget.TooltipCompat
@@ -77,15 +79,13 @@ class ServiceButton @JvmOverloads constructor(context: Context, attrs: Attribute
             }
             else -> changeState(iconStopped, animate)
         }
-        if (state == BaseService.State.Connected) {
-            checked = true
-            TooltipCompat.setTooltipText(this, context.getString(R.string.stop))
-        } else {
-            checked = false
-            TooltipCompat.setTooltipText(this, context.getString(R.string.connect))
-        }
+        checked = state == BaseService.State.Connected
         refreshDrawableState()
-        isEnabled = state.canStop || state == BaseService.State.Stopped
+        TooltipCompat.setTooltipText(this, context.getString(if (state.canStop) R.string.stop else R.string.connect))
+        val enabled = state.canStop || state == BaseService.State.Stopped
+        isEnabled = enabled
+        if (Build.VERSION.SDK_INT >= 24) pointerIcon = PointerIcon.getSystemIcon(context,
+                if (enabled) PointerIcon.TYPE_HAND else PointerIcon.TYPE_WAIT)
     }
 
     private fun changeState(icon: AnimatedVectorDrawableCompat, animate: Boolean) {

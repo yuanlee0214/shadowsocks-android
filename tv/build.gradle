@@ -17,7 +17,6 @@ def getCurrentFlavor() {
 }
 
 android {
-    buildToolsVersion rootProject.buildToolsVersion
     compileSdkVersion rootProject.compileSdkVersion
     defaultConfig {
         applicationId "com.github.shadowsocks.tv"
@@ -38,7 +37,12 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
-    lintOptions.checkReleaseBuilds false
+    compileOptions {
+        sourceCompatibility javaVersion
+        targetCompatibility javaVersion
+    }
+    kotlinOptions.jvmTarget = javaVersion
+    packagingOptions.exclude '**/*.kotlin_*'
     splits {
         abi {
             enable true
@@ -52,7 +56,7 @@ android {
 dependencies {
     implementation project(':core')
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation "androidx.leanback:leanback-preference:1.1.0-alpha01"
+    implementation "androidx.leanback:leanback-preference:1.1.0-alpha02"
 }
 
 apply plugin: 'com.google.gms.google-services'
