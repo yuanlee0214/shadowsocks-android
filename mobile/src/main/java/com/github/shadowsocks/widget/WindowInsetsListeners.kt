@@ -18,29 +18,36 @@
  *                                                                             *
  *******************************************************************************/
 
-package com.github.shadowsocks.preference
+package com.github.shadowsocks.widget
 
-import android.graphics.Typeface
-import android.text.InputFilter
-import android.view.inputmethod.EditorInfo
-import android.widget.EditText
-import androidx.preference.EditTextPreference
+import android.view.View
+import android.view.WindowInsets
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.updatePadding
+import com.github.shadowsocks.R
 
-object EditTextPreferenceModifiers {
-    object Monospace : EditTextPreference.OnBindEditTextListener {
-        override fun onBindEditText(editText: EditText) {
-            editText.typeface = Typeface.MONOSPACE
-        }
+object ListHolderListener : View.OnApplyWindowInsetsListener {
+    override fun onApplyWindowInsets(view: View, insets: WindowInsets): WindowInsets {
+        view.updatePadding(insets.systemWindowInsetLeft, insets.systemWindowInsetTop, insets.systemWindowInsetRight)
+        @Suppress("DEPRECATION")
+        return insets.replaceSystemWindowInsets(0, 0, 0, insets.systemWindowInsetBottom)
     }
 
-    object Port : EditTextPreference.OnBindEditTextListener {
-        private val portLengthFilter = arrayOf(InputFilter.LengthFilter(5))
+    fun setup(activity: AppCompatActivity) = activity.findViewById<View>(android.R.id.content).apply {
+        setOnApplyWindowInsetsListener(ListHolderListener)
+        systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_STABLE or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+    }
+}
 
-        override fun onBindEditText(editText: EditText) {
-            editText.inputType = EditorInfo.TYPE_CLASS_NUMBER
-            editText.filters = portLengthFilter
-            editText.setSingleLine()
-            editText.setSelection(editText.text.length)
-        }
+object MainListListener : View.OnApplyWindowInsetsListener {
+    override fun onApplyWindowInsets(view: View, insets: WindowInsets) = insets.apply {
+        view.updatePadding(bottom = view.resources.getDimensionPixelOffset(R.dimen.main_list_padding_bottom) +
+                systemWindowInsetBottom)
+    }
+}
+
+object ListListener : View.OnApplyWindowInsetsListener {
+    override fun onApplyWindowInsets(view: View, insets: WindowInsets) = insets.apply {
+        view.updatePadding(bottom = systemWindowInsetBottom)
     }
 }

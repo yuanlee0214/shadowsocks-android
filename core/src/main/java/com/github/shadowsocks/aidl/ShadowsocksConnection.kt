@@ -24,7 +24,6 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
-import android.os.DeadObjectException
 import android.os.Handler
 import android.os.IBinder
 import android.os.RemoteException
@@ -85,11 +84,10 @@ class ShadowsocksConnection(private val handler: Handler = Handler(),
 
     var bandwidthTimeout = 0L
         set(value) {
-            val service = service
-            if (bandwidthTimeout != value && service != null) try {
-                if (value > 0) service.startListeningForBandwidth(serviceCallback, value)
-                else service.stopListeningForBandwidth(serviceCallback)
-            } catch (_: DeadObjectException) { }
+            try {
+                if (value > 0) service?.startListeningForBandwidth(serviceCallback, value)
+                else service?.stopListeningForBandwidth(serviceCallback)
+            } catch (_: RemoteException) { }
             field = value
         }
     var service: IShadowsocksService? = null
@@ -146,7 +144,9 @@ class ShadowsocksConnection(private val handler: Handler = Handler(),
         connectionActive = false
         if (listenForDeath) binder?.unlinkToDeath(this, 0)
         binder = null
-        service?.stopListeningForBandwidth(serviceCallback)
+        try {
+            service?.stopListeningForBandwidth(serviceCallback)
+        } catch (_: RemoteException) { }
         service = null
         callback = null
     }
